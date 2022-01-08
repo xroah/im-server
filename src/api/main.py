@@ -1,10 +1,10 @@
 from fastapi import Request, FastAPI, responses
 import time
 import json
-from .login import main
+from .routers.account.main import router as account_router
 
 api = FastAPI()
-api.include_router(main.router)
+api.include_router(account_router)
 
 
 @api.get("/")
