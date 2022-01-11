@@ -1,6 +1,7 @@
 from fastapi import APIRouter
-from sqlalchemy import text, select
-from ...db.tables import Account, engine, session
+from sqlalchemy import select
+from ...db.tables import Account
+from ...db.main import session
 
 router = APIRouter(prefix="/account")
 
