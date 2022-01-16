@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import select
 from pydantic import BaseModel
+from jose import jwt
 from ...db.tables import Account
 from ...db.main import session
 from ...utils import md5
@@ -16,7 +17,7 @@ class LoginParam(BaseModel):
 @router.post("/login")
 def login(param: LoginParam):
     result = session.execute(
-        select(Account.username, Account.password).
+        select(Account.userid, Account.username, Account.password).
         where(
             Account.username == param.username,
             Account.password == md5(param.password)
@@ -33,6 +34,6 @@ def login(param: LoginParam):
     }
 
 
-@router.get("/register")
+@router.post("/register")
 def register():
     return "register"
