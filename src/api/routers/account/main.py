@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from jose import jwt
 from ...db.tables import Account
-from ...db.main import session
+from ...db.main import Session
 from ...utils import md5
 
 router = APIRouter(prefix="/account")
@@ -16,7 +17,7 @@ class LoginParam(BaseModel):
 
 @router.post("/login")
 def login(param: LoginParam):
-    result = session.execute(
+    result = Session().execute(
         select(Account.userid, Account.username, Account.password).
         where(
             Account.username == param.username,
@@ -35,5 +36,30 @@ def login(param: LoginParam):
 
 
 @router.post("/register")
-def register():
-    return "register"
+def register(param: LoginParam):
+    new_user = Account(
+        username=param.username,
+        password=md5(param.password)
+    )
+
+    try:
+        with Session() as s:
+            s.add(new_user)
+            userid = new_user.userid
+            s.commit()
+    except IntegrityError as e:
+        return {
+            "code": -2,
+            "msg": "该用户名已被使用"
+        }
+    except Exception as e:
+        return {
+            "code": -1,
+            "msg": e
+        }
+
+    return {
+        "code": 0,
+        "msg": "注册成功",
+        "data": userid
+    }
