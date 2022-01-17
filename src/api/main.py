@@ -1,6 +1,7 @@
-from fastapi import Request, FastAPI, responses
+from fastapi import Request, FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 import time
-import json
 from .routers.account.main import router as account_router
 
 api = FastAPI()
@@ -25,3 +26,11 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
 
     return response
+
+
+@api.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(status_code=400, content={
+        "code": -100,
+        "msg": "参数错误"
+    })

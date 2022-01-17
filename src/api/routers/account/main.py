@@ -16,7 +16,7 @@ class LoginParam(BaseModel):
 
 
 @router.post("/login")
-def login(param: LoginParam):
+async def login(param: LoginParam):
     result = Session().execute(
         select(Account.userid, Account.username, Account.password).
         where(
@@ -36,7 +36,7 @@ def login(param: LoginParam):
 
 
 @router.post("/register")
-def register(param: LoginParam):
+async def register(param: LoginParam):
     new_user = Account(
         username=param.username,
         password=md5(param.password)
@@ -63,3 +63,5 @@ def register(param: LoginParam):
         "msg": "注册成功",
         "data": userid
     }
+
+
