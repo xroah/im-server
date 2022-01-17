@@ -6,6 +6,9 @@ from jose import jwt
 from ...db.tables import Account
 from ...db.main import Session
 from ...utils import md5
+from ...db.redis import Redis
+import time
+
 
 router = APIRouter(prefix="/account")
 
@@ -29,9 +32,23 @@ async def login(param: LoginParam):
     if len(result) == 0:
         return {"code": -1, "msg": "用户名或密码错误"}
 
+    result = result[0]
+
+    token = jwt.encode(
+        {
+            "userid": result.userid,
+            "username": result.username,
+            "expire": 7 * 24 * 3600 + time.time()
+        },
+        "secret",
+        algorithm="HS256"
+    )
+    Redis.set(str(result.userid) + "_" + result.username, token)
+
     return {
         "code": 0,
-        "msg": "登录成功!"
+        "msg": "登录成功!",
+        "data": token
     }
 
 
@@ -45,23 +62,24 @@ async def register(param: LoginParam):
     try:
         with Session() as s:
             s.add(new_user)
+            s.flush()
             userid = new_user.userid
             s.commit()
-    except IntegrityError as e:
-        return {
+    except IntegrityError:
+        result = {
             "code": -2,
             "msg": "该用户名已被使用"
         }
     except Exception as e:
-        return {
+        result = {
             "code": -1,
             "msg": e
         }
+    else:
+        result = {
+            "code": 0,
+            "msg": "注册成功",
+            "data": userid
+        }
 
-    return {
-        "code": 0,
-        "msg": "注册成功",
-        "data": userid
-    }
-
-
+    return result
