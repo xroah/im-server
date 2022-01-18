@@ -2,12 +2,12 @@ from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
-from jose import jwt
 from ...db.tables import Account
 from ...db.main import Session
 from ...utils import md5
 from ...db.redis import Redis
 from ...utils import encode_token, decode_token
+from ...codeenum import Code
 import time
 
 
@@ -31,7 +31,7 @@ async def login(param: LoginParam):
     ).all()
 
     if len(result) == 0:
-        return {"code": -1, "msg": "用户名或密码错误"}
+        return {"code": Code.LOGIN_ERROR, "msg": "用户名或密码错误"}
 
     result = result[0]
 
@@ -43,7 +43,7 @@ async def login(param: LoginParam):
     Redis.set(str(result.userid) + "_" + result.username, token)
 
     return {
-        "code": 0,
+        "code": Code.SUCCESS,
         "msg": "登录成功!",
         "data": token
     }
@@ -64,17 +64,17 @@ async def register(param: LoginParam):
             s.commit()
     except IntegrityError:
         result = {
-            "code": -2,
+            "code": Code.REG_ERROR,
             "msg": "该用户名已被使用"
         }
     except Exception as e:
         result = {
-            "code": -1,
+            "code": Code.UNKNOWN_ERROR,
             "msg": e
         }
     else:
         result = {
-            "code": 0,
+            "code": Code.SUCCESS,
             "msg": "注册成功",
             "data": userid
         }

@@ -5,6 +5,7 @@ import time
 from .routers.account.main import router as account_router
 from .utils import get_token_from_header, decode_token
 from .db.redis import Redis
+from .codeenum import Code
 
 api = FastAPI()
 api.include_router(account_router)
@@ -49,7 +50,7 @@ async def interceptor(request: Request, call_next):
             return JSONResponse(
                 status_code=401,
                 content={
-                    "code": 401,
+                    "code": Code.NO_PERM,
                     "msg": msg
                 }
             )
@@ -64,6 +65,6 @@ async def interceptor(request: Request, call_next):
 @api.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return JSONResponse(status_code=400, content={
-        "code": -100,
+        "code": Code.FILED_ERROR,
         "msg": "参数错误"
     })
