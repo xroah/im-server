@@ -3,6 +3,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import time
 from .routers.account.main import router as account_router
+from .utils import get_token_from_header, decode_token
+from .db.redis import Redis
 
 api = FastAPI()
 api.include_router(account_router)
@@ -14,12 +16,43 @@ async def root():
 
 
 @api.middleware("http")
-async def add_process_time_header(request: Request, call_next):
+async def interceptor(request: Request, call_next):
     start_time = time.time()
-    # if ("authorization" not in request.headers) or (not request.headers["authorization"]):
-    #     data = json.dumps({"code": 401, "msg": "没有权限"})
-    #
-    #     return responses.JSONResponse(status_code=401, content=data)
+    path_whitelist = {"/api/account/login", "/api/account/register"}
+
+    if request.url.path not in path_whitelist:
+        token = get_token_from_header(request)
+        msg = ""
+
+        if token is None:
+            msg = "没有权限"
+        else:
+            try:
+                decoded_token = decode_token(token)
+            except:
+                msg = "token解析错误"
+            else:
+                if ("userid" not in decoded_token or
+                        "username" not in decoded_token or
+                        "expire" not in decoded_token):
+                    msg = "token格式错误"
+                else:
+                    userid = decoded_token["userid"]
+                    username = decoded_token["username"]
+                    expire = decoded_token["expire"]
+                    saved_token = Redis.get(f"{userid}_{username}")
+
+                    if expire < time.time() or saved_token != token:
+                        msg = "登录已过期, 请重新登录"
+
+        if msg:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "code": 401,
+                    "msg": msg
+                }
+            )
 
     response = await call_next(request)
     process_time = time.time() - start_time
