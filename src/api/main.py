@@ -41,9 +41,15 @@ async def interceptor(request: Request, call_next):
                     userid = decoded_token["userid"]
                     username = decoded_token["username"]
                     expire = decoded_token["expire"]
+                    # returns string of bytes
                     saved_token = Redis.get(f"{userid}_{username}")
 
-                    if expire < time.time() or saved_token != token:
+                    if saved_token:
+                        saved_token = saved_token.decode()
+
+                    if (expire < time.time() or
+                            not saved_token or
+                            saved_token != token):
                         msg = "登录已过期, 请重新登录"
 
         if msg:
@@ -63,7 +69,7 @@ async def interceptor(request: Request, call_next):
 
 
 @api.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
+async def validation_exception_handler(_, __):
     return JSONResponse(status_code=400, content={
         "code": Code.FILED_ERROR,
         "msg": "参数错误"

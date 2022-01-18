@@ -9,4 +9,5 @@ class Code(IntEnum):
     FILED_ERROR = 1001  # wrong fields of request body
     REG_ERROR = 1002  # register error, such as the username already exists
     LOGIN_ERROR = 1003  # login error, such as wrong password
+    PWD_ERROR = 1004  # old password error
 

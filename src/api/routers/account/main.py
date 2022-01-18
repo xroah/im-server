@@ -1,15 +1,20 @@
-from fastapi import APIRouter
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel
-from ...db.tables import Account
-from ...db.main import Session
-from ...utils import md5
-from ...db.redis import Redis
-from ...utils import encode_token, decode_token
-from ...codeenum import Code
 import time
 
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
+
+from ...codeenum import Code
+from ...db.main import Session
+from ...db.redis import Redis
+from ...db.tables import Account
+from ...utils import (
+    encode_token,
+    decode_token_from_header,
+    get_key
+)
+from ...utils import md5
 
 router = APIRouter(prefix="/account")
 
@@ -19,15 +24,20 @@ class LoginParam(BaseModel):
     password: str
 
 
+class PasswordParam(BaseModel):
+    new_password: str
+    old_password: str
+
+
 @router.post("/login")
 async def login(param: LoginParam):
     result = Session().execute(
         select(Account.userid, Account.username, Account.password).
-        where(
+            where(
             Account.username == param.username,
             Account.password == md5(param.password)
         ).
-        limit(1)
+            limit(1)
     ).all()
 
     if len(result) == 0:
@@ -46,6 +56,20 @@ async def login(param: LoginParam):
         "code": Code.SUCCESS,
         "msg": "登录成功!",
         "data": token
+    }
+
+
+@router.post("/logout")
+async def logout(req: Request):
+    token = decode_token_from_header(req)
+
+    if token:
+        key = get_key(token["userid"], token["username"])
+        Redis.delete(key)
+
+    return {
+        "code": Code.SUCCESS,
+        "msg": "退出成功"
     }
 
 
@@ -80,3 +104,37 @@ async def register(param: LoginParam):
         }
 
     return result
+
+
+@router.post("/update_pwd")
+async def update_password(req: Request, param: PasswordParam):
+    token = decode_token_from_header(req)
+    userid = token["userid"]
+    password = md5(param.old_password).upper()
+
+    with Session() as s:
+        result = s.execute(
+            select(Account.userid).where(
+                Account.userid == userid,
+                Account.password == password
+            )
+        ).all()
+
+    if len(result) == 0:
+        return {
+            "code": 0,
+            "msg": "旧密码错误"
+        }
+
+    with Session() as s:
+        s.execute(
+            update(Account).
+            where(Account.userid == userid).
+            values(password=md5(param.new_password).upper())
+        )
+        s.commit()
+
+    return {
+        "code": Code.SUCCESS,
+        "msg": "修改成功"
+    }

@@ -23,7 +23,7 @@ def decode_token(token: str):
 
 
 def get_token_from_header(req: Request):
-    name = "authentication"
+    name = "Authentication"
     headers = req.headers
     prefix = "Bearer "
 
@@ -36,3 +36,16 @@ def get_token_from_header(req: Request):
         return None
 
     return token.removeprefix(prefix)
+
+
+def decode_token_from_header(req: Request):
+    token = get_token_from_header(req)
+
+    if token is None:
+        return None
+
+    return decode_token(token)
+
+
+def get_key(userid: str, username: str):
+    return f"{userid}_{username}"
