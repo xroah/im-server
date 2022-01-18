@@ -7,6 +7,7 @@ from ...db.tables import Account
 from ...db.main import Session
 from ...utils import md5
 from ...db.redis import Redis
+from ...utils import encode_token, decode_token
 import time
 
 
@@ -34,15 +35,11 @@ async def login(param: LoginParam):
 
     result = result[0]
 
-    token = jwt.encode(
-        {
-            "userid": result.userid,
-            "username": result.username,
-            "expire": 7 * 24 * 3600 + time.time()
-        },
-        "secret",
-        algorithm="HS256"
-    )
+    token = encode_token({
+        "userid": result.userid,
+        "username": result.username,
+        "expire": 7 * 24 * 3600 + time.time()
+    })
     Redis.set(str(result.userid) + "_" + result.username, token)
 
     return {
