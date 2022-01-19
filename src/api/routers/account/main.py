@@ -24,6 +24,11 @@ class LoginParam(BaseModel):
     password: str
 
 
+class RegisterParam(LoginParam):
+    key: str
+    code: str
+
+
 class PasswordParam(BaseModel):
     new_password: str
     old_password: str
@@ -31,17 +36,23 @@ class PasswordParam(BaseModel):
 
 @router.post("/login")
 async def login(param: LoginParam):
-    result = Session().execute(
-        select(Account.userid, Account.username, Account.password).
-            where(
-            Account.username == param.username,
-            Account.password == md5(param.password)
-        ).
-            limit(1)
-    ).all()
+    with Session() as s:
+        result = s.execute(
+            select(
+                Account.userid,
+                Account.username,
+                Account.password
+            ).where(
+                Account.username == param.username,
+                Account.password == md5(param.password)
+            ).limit(1)
+        ).all()
 
     if len(result) == 0:
-        return {"code": Code.LOGIN_ERROR, "msg": "用户名或密码错误"}
+        return {
+            "code": Code.COMMON_ERROR,
+            "msg": "用户名或密码错误"
+        }
 
     result = result[0]
 
@@ -63,9 +74,8 @@ async def login(param: LoginParam):
 async def logout(req: Request):
     token = decode_token_from_header(req)
 
-    if token:
-        key = get_key(token["userid"], token["username"])
-        Redis.delete(key)
+    key = get_key(token["userid"], token["username"])
+    Redis.delete(key)
 
     return {
         "code": Code.SUCCESS,
@@ -88,7 +98,7 @@ async def register(param: LoginParam):
             s.commit()
     except IntegrityError:
         result = {
-            "code": Code.REG_ERROR,
+            "code": Code.COMMON_ERROR,
             "msg": "该用户名已被使用"
         }
     except Exception as e:
@@ -111,6 +121,7 @@ async def update_password(req: Request, param: PasswordParam):
     token = decode_token_from_header(req)
     userid = token["userid"]
     password = md5(param.old_password).upper()
+    new_password = md5(param.new_password).upper()
 
     with Session() as s:
         result = s.execute(
@@ -122,15 +133,15 @@ async def update_password(req: Request, param: PasswordParam):
 
     if len(result) == 0:
         return {
-            "code": 0,
+            "code": Code.COMMON_ERROR,
             "msg": "旧密码错误"
         }
 
     with Session() as s:
         s.execute(
             update(Account).
-            where(Account.userid == userid).
-            values(password=md5(param.new_password).upper())
+                where(Account.userid == userid).
+                values(password=new_password)
         )
         s.commit()
 

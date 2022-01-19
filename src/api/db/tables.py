@@ -10,8 +10,6 @@ class Account(Base):
     password = Column(String(32), nullable=False)
     email = Column(String(40))
     mobile = Column(String(11))
-    social_account = Column(String(40))
-    social_type = Column(Integer)
     create_time = Column(
         TIMESTAMP,
         server_default=(text("CURRENT_TIMESTAMP"))

@@ -44,9 +44,6 @@ async def interceptor(request: Request, call_next):
                     # returns string of bytes
                     saved_token = Redis.get(f"{userid}_{username}")
 
-                    if saved_token:
-                        saved_token = saved_token.decode()
-
                     if (expire < time.time() or
                             not saved_token or
                             saved_token != token):
@@ -71,6 +68,6 @@ async def interceptor(request: Request, call_next):
 @api.exception_handler(RequestValidationError)
 async def validation_exception_handler(_, __):
     return JSONResponse(status_code=400, content={
-        "code": Code.FILED_ERROR,
+        "code": Code.COMMON_ERROR,
         "msg": "参数错误"
     })

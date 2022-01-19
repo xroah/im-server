@@ -19,4 +19,9 @@ class Redis:
 
     @staticmethod
     def get(key: str):
-        return _redis_conn.get(key)
+        v = _redis_conn.get(key)
+
+        if v:
+            v = v.decode()
+
+        return v

@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS account (
     password CHAR(32) NOT NULL,
     email VARCHAR(40),
     mobile CHAR(11),
-    social_account VARCHAR(40) COMMENT "社交账户如微信等",
-    social_type TINYINT,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
