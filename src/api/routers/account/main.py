@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ...codeenum import Code
 from ...db.main import Session
-from ...db.redis import Redis
+from ...db.redis import default_redis_db
 from ...db.tables import Account
 from ...utils import (
     encode_token,
@@ -61,7 +61,7 @@ async def login(param: LoginParam):
         "username": result.username,
         "expire": 7 * 24 * 3600 + time.time()
     })
-    Redis.set(str(result.userid) + "_" + result.username, token)
+    default_redis_db.set(str(result.userid) + "_" + result.username, token)
 
     return {
         "code": Code.SUCCESS,
@@ -75,7 +75,7 @@ async def logout(req: Request):
     token = decode_token_from_header(req)
 
     key = get_key(token["userid"], token["username"])
-    Redis.delete(key)
+    default_redis_db.delete(key)
 
     return {
         "code": Code.SUCCESS,

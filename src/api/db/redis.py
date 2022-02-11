@@ -1,27 +1,28 @@
 import redis
 from typing import Any
 
-_redis_conn = redis.Redis(host="localhost", port=6379, db=0)
-
 
 class Redis:
-    @staticmethod
-    def set(key: str, value: Any):
-        return _redis_conn.set(key, value, ex=7 * 24 * 3600)
+    def __init__(self, db: int = 0):
+        pool = redis.ConnectionPool(host="localhost", port=6379, db=db)
+        self.conn = redis.Redis(connection_pool=pool)
 
-    @staticmethod
-    def expire(key: str, time: int):
-        return _redis_conn.expire(key, time)
+    def set(self, key: str, value: Any):
+        return self.conn.set(key, value, ex=7 * 24 * 3600)
 
-    @staticmethod
-    def delete(key: str):
-        return _redis_conn.delete(key)
+    def expire(self, key: str, time: int):
+        return self.conn.expire(key, time)
 
-    @staticmethod
-    def get(key: str):
-        v = _redis_conn.get(key)
+    def delete(self, key: str):
+        return self.conn.delete(key)
+
+    def get(self, key: str):
+        v = self.conn.get(key)
 
         if v:
             v = v.decode()
 
         return v
+
+
+default_redis_db = Redis(0)
