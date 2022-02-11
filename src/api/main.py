@@ -2,13 +2,17 @@ from fastapi import Request, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import time
-from .routers.account.main import router as account_router
+
 from .utils import get_token_from_header, decode_token
 from .db.redis import Redis
 from .codeenum import Code
 
+from .routers.account.main import router as account_router
+from .routers.commons.main import router as common_router
+
 api = FastAPI()
 api.include_router(account_router)
+api.include_router(common_router)
 
 
 @api.get("/")
@@ -19,7 +23,11 @@ async def root():
 @api.middleware("http")
 async def interceptor(request: Request, call_next):
     start_time = time.time()
-    path_whitelist = {"/api/account/login", "/api/account/register"}
+    path_whitelist = {
+        "/api/account/login",
+        "/api/account/register",
+        "/api/commons/get_code"
+    }
 
     if request.url.path not in path_whitelist:
         token = get_token_from_header(request)
