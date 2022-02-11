@@ -39,7 +39,7 @@ def draw_line(img: Image):
     d.line(xy, fill=black, width=1)
 
 
-def gen_code_img():
+def gen_code():
     char_width = 30
     char_height = 40
     chars = get_code()
@@ -63,7 +63,10 @@ def gen_code_img():
 
     draw_line(code_image)
 
-    return code_image
+    return {
+        "code": "".join(chars),
+        "image": code_image
+    }
 
 
 def img2base64(image):

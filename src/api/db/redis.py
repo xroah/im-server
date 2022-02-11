@@ -7,8 +7,8 @@ class Redis:
         pool = redis.ConnectionPool(host="localhost", port=6379, db=db)
         self.conn = redis.Redis(connection_pool=pool)
 
-    def set(self, key: str, value: Any):
-        return self.conn.set(key, value, ex=7 * 24 * 3600)
+    def set(self, key: str, value: Any, ex: int = 7 * 24 * 3600):
+        return self.conn.set(key, value, ex)
 
     def expire(self, key: str, time: int):
         return self.conn.expire(key, time)
