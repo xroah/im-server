@@ -26,3 +26,4 @@ class Redis:
 
 
 default_redis_db = Redis(0)
+veri_code_db = Redis(1)

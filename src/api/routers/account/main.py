@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ...codeenum import Code
 from ...db.main import Session
-from ...db.redis import default_redis_db
+from ...db.redis import default_redis_db, veri_code_db
 from ...db.tables import Account
 from ...utils import (
     encode_token,
@@ -84,7 +84,17 @@ async def logout(req: Request):
 
 
 @router.post("/register")
-async def register(param: LoginParam):
+async def register(param: RegisterParam):
+    key = param.key
+    v_code = param.code
+    db_code = veri_code_db.get(key)
+
+    if db_code or db_code == v_code:
+        return {
+            "code": Code.COMMON_ERROR,
+            "msg": "验证码不正确"
+        }
+
     new_user = Account(
         username=param.username,
         password=md5(param.password)
