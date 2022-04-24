@@ -1,2 +1,0 @@
-CREATE DATABASE IF NOT EXISTS account_book CHARACTER SET UTF8;
-USE account_book;
