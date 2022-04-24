@@ -20,7 +20,7 @@ async def root():
     return "Welcome"
 
 
-@api.middleware("http")
+# @api.middleware("http")
 async def interceptor(request: Request, call_next):
     start_time = time.time()
     path_whitelist = {
