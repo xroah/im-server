@@ -2,13 +2,11 @@ import time
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from bson import ObjectId
 
 from ...codeenum import Code
-from ...db.main import Session
 from ...db.redis import default_redis_db, veri_code_db
-from ...db.tables import Account
+from ...db.mongo import users_coll
 from ...utils import (
     encode_token,
     decode_token_from_header,
@@ -36,32 +34,24 @@ class PasswordParam(BaseModel):
 
 @router.post("/login")
 async def login(param: LoginParam):
-    with Session() as s:
-        result = s.execute(
-            select(
-                Account.userid,
-                Account.username,
-                Account.password
-            ).where(
-                Account.username == param.username,
-                Account.password == md5(param.password)
-            ).limit(1)
-        ).all()
+    user = await users_coll.find_one({
+        "username": param.username,
+        "password": param.password
+    })
 
-    if len(result) == 0:
+    if user:
         return {
             "code": Code.COMMON_ERROR,
             "msg": "用户名或密码错误"
         }
 
-    result = result[0]
-
+    user_id = str(user._id)
     token = encode_token({
-        "userid": result.userid,
-        "username": result.username,
+        "userid": user_id,
+        "username": user.username,
         "expire": 7 * 24 * 3600 + time.time()
     })
-    default_redis_db.set(str(result.userid) + "_" + result.username, token)
+    default_redis_db.set(user_id + "_" + user.username, token)
 
     return {
         "code": Code.SUCCESS,
@@ -95,32 +85,22 @@ async def register(param: RegisterParam):
             "msg": "验证码不正确"
         }
 
-    new_user = Account(
-        username=param.username,
-        password=md5(param.password)
-    )
-
-    try:
-        with Session() as s:
-            s.add(new_user)
-            s.flush()
-            userid = new_user.userid
-            s.commit()
-    except IntegrityError:
+    new_user = {
+        "username": param.username,
+        "password": param.password
+    }
+    exist_user = await users_coll.find_one({"username": param.username})
+    if exist_user:
         result = {
             "code": Code.COMMON_ERROR,
             "msg": "该用户名已被使用"
         }
-    except Exception as e:
-        result = {
-            "code": Code.UNKNOWN_ERROR,
-            "msg": e
-        }
     else:
+        insert_result = users_coll.insert_one(new_user)
         result = {
             "code": Code.SUCCESS,
             "msg": "注册成功",
-            "data": userid
+            "data": str(insert_result.inserted_id)
         }
 
     return result
@@ -132,28 +112,29 @@ async def update_password(req: Request, param: PasswordParam):
     userid = token["userid"]
     password = md5(param.old_password).upper()
     new_password = md5(param.new_password).upper()
+    obj_id = ObjectId(userid)
 
-    with Session() as s:
-        result = s.execute(
-            select(Account.userid).where(
-                Account.userid == userid,
-                Account.password == password
-            )
-        ).all()
+    user = await userid.find_one(
+        {
+            "_id": obj_id,
+            "password": password
+        }
+    )
 
-    if len(result) == 0:
+    if not user:
         return {
             "code": Code.COMMON_ERROR,
             "msg": "旧密码错误"
         }
 
-    with Session() as s:
-        s.execute(
-            update(Account).
-                where(Account.userid == userid).
-                values(password=new_password)
-        )
-        s.commit()
+    users_coll.update_one(
+        {"_id": obj_id},
+        {
+            "$set": {
+                "password": new_password
+            }
+        }
+    )
 
     return {
         "code": Code.SUCCESS,
