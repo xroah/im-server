@@ -2,7 +2,6 @@ from fastapi import Request, FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import time
-import os
 
 from .utils import get_token_from_header, decode_token
 from .db.redis import Redis
@@ -30,7 +29,6 @@ def create_api(is_dev=False):
 
     # @api.middleware("http")
     async def interceptor(request: Request, call_next):
-        start_time = time.time()
         path_whitelist = {
             "/api/account/login",
             "/api/account/register",
@@ -75,8 +73,6 @@ def create_api(is_dev=False):
                 )
 
         response = await call_next(request)
-        process_time = time.time() - start_time
-        response.headers["X-Process-Time"] = str(process_time)
 
         return response
 
