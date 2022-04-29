@@ -45,7 +45,7 @@ async def login(param: LoginParam):
             "msg": "用户名或密码错误"
         }
 
-    user_id = str(user._id)
+    user_id = str(user["_id"])
     token = encode_token({
         "userid": user_id,
         "username": user.username,
@@ -114,14 +114,9 @@ async def update_password(req: Request, param: PasswordParam):
     new_password = md5(param.new_password).upper()
     obj_id = ObjectId(userid)
 
-    user = await userid.find_one(
-        {
-            "_id": obj_id,
-            "password": password
-        }
-    )
+    user = await userid.find_one({"_id": obj_id})
 
-    if not user:
+    if not user or user["password"] != password:
         return {
             "code": Code.COMMON_ERROR,
             "msg": "旧密码错误"
